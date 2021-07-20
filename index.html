@@ -82,6 +82,7 @@ const character = name => {
 	group.add(text_plane)
 	group.add(cube)
 
+	// makes the character say something on screen
 	const say = text => {
 		text = `<${name}>\n${text}`
 		console.log('zz')
@@ -101,22 +102,17 @@ const character = name => {
 
 var scene = new THREE.Scene();
 
-//var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+// setting up camera
 const [width, height] = [window.innerWidth / 100, window.innerHeight / 100]
 const camera = new THREE.OrthographicCamera( width / -2, width / 2, height / 2, height / -2, 0.1, 1000 );
 scene.add( camera );
 camera.position.set(5, 5, 5)
-
+camera.lookAt(0, 0, 0)
 
 var renderer = new THREE.WebGLRenderer();
-
-
 renderer.setSize( window.innerWidth, window.innerHeight );
 window.onresize = _ => renderer.setSize(window.innerWidth, window.innerHeight)
-
 document.body.appendChild( renderer.domElement );
-
-  camera.lookAt(0, 0, 0)
 
 var ground = new THREE.Mesh
 	( new THREE.PlaneGeometry( 3, 3 )
@@ -129,10 +125,6 @@ const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
 scene.add( directionalLight );
 scene.position.set(1, 1, 1)
 
-//document.querySelector('body').appendChild(canv)
-
-const players = {}
-
 var animate = function () {
 	requestAnimationFrame( animate );
 	renderer.render( scene, camera );
@@ -142,9 +134,25 @@ animate();
 
 const TEXTBOX = document.querySelector('#textbox')
 
+// network code i guess
 ;(async _=>{
+const players = {}
+
 const host = 'localhost:8080'
 const sock = new WebSocket(`ws://${host}/chat/${encodeURIComponent(username)}`)
+
+// and the server knows which url you connected to. so, it knows what username you want.
+// true, but the test server kept track of which usernames exist. so, if someone tried to connect with an existing username, it would just not allow connection. yes there could only be one 'hoo'! haha
+
+/* list of things server should do:
+
+- keep track of who has what username
+- do not let anyone take an existing username (just refuse!!)
+
+// 'type' is like 'the type of the json thing. it is like the purpose of the json you are sending to me.'
+- accept { type: 'say', message: string }
+
+*/
 
 console.log('waiting...')
 // wait for socket to fully open
@@ -154,8 +162,9 @@ console.log('opened')
 const send_json = json => sock.send(JSON.stringify(json))
 
 const send_message = msg => sock.send(JSON.stringify({ type: 'say', message: msg }))
-//const send_message = msg => sock.send(JSON.stringify({ user: username, text: msg }))
 
+// by 'send message', it means 'send a message that will display 'in-game' for everyone'.
+// it sends to server: { type: 'say', message: the string that is the mssage to be shown in game. }
 send_message(`i have arrived!!`)
 
 // send messages from textbox
@@ -169,15 +178,19 @@ TEXTBOX.addEventListener('keypress', e => {
 sock.onmessage = e => {
 	console.log(e.data)
 	const j = JSON.parse(e.data)
-	if (j.type === 'existance') {
+	if (j.type === 'existance') { // inform that another character cube exists. and where.
+		// { type: 'existance', username: string, x: number, y: number, z: number }
 		players[j.username] = character(j.username)
 		players[j.username].group.position.set(j.x, j.y, j.z)
 		scene.add(players[j.username].group)
-	} else if (j.type === 'move') {
+	} else if (j.type === 'move') { // inform that another character moved
+		// { type: 'move', username: string, x: number, y: number, z: number }
 		players[j.username].group.position.set(j.x, j.y, j.z)
-	} else if (j.type === 'say') {
+	} else if (j.type === 'say') { // inform that another character said a  message
+		// { type: 'say', user: string of username, message: the string that is the mssage to be shown in game. }
 		players[j.username].say(j.message)
-	} else if (j.type === 'nonexistance') {
+	} else if (j.type === 'nonexistance') { //inform that another character disconnected.
+		// { type: 'existance', username: string }
 		scene.remove(players[j.username].group)
 		delete players[j.username]
 	}
@@ -196,6 +209,7 @@ const raycast = e => {
 	//group.position = intersections[0].point
 	const p = intersections[0].point
 	//me.group.position.set(p.x, p.y, p.z)
+	// sends server { type: 'move '} when move
 	send_json({ type: 'move', x: p.x, y: p.y, z: p.z })
 }
 
