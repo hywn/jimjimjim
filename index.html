@@ -187,10 +187,10 @@ sock.onmessage = e => {
 		// { type: 'move', username: string, x: number, y: number, z: number }
 		players[j.username].group.position.set(j.x, j.y, j.z)
 	} else if (j.type === 'say') { // inform that another character said a  message
-		// { type: 'say', user: string of username, message: the string that is the mssage to be shown in game. }
+		// { type: 'say', username: string of username, message: the string that is the mssage to be shown in game. }
 		players[j.username].say(j.message)
 	} else if (j.type === 'nonexistance') { //inform that another character disconnected.
-		// { type: 'existance', username: string }
+		// { type: 'nonexistance', username: string }
 		scene.remove(players[j.username].group)
 		delete players[j.username]
 	}
@@ -209,7 +209,7 @@ const raycast = e => {
 	//group.position = intersections[0].point
 	const p = intersections[0].point
 	//me.group.position.set(p.x, p.y, p.z)
-	// sends server { type: 'move '} when move
+	// sends server { type: 'move', x: number, y: number, z: number } when move
 	send_json({ type: 'move', x: p.x, y: p.y, z: p.z })
 }
 
